@@ -1,78 +1,70 @@
 let database = [];
-let selectedRows = []; // To track data added to the table
 
-// 1. Load the database and populate the Building dropdown
+// 1. Load Data
 fetch("database.json")
     .then(res => res.json())
     .then(data => {
         database = data;
-        const select = document.getElementById("buildingSelect");
+        const bSelect = document.getElementById("buildingSelect");
         
         database.forEach(item => {
-            let option = document.createElement("option");
-            option.value = item.building;
-            option.text = item.building;
-            select.appendChild(option);
+            let opt = new Option(item.building, item.building);
+            bSelect.add(opt);
         });
+        // Trigger initial ECS list population
+        updateEcsDropdown();
     });
 
-// 2. Add selected building to the table
-function addRow() {
-    const buildingCode = document.getElementById("buildingSelect").value;
-    const match = database.find(d => d.building === buildingCode);
-    const table = document.getElementById("ecsTable");
-
+// 2. Update ECS list when Building changes
+function updateEcsDropdown() {
+    const bValue = document.getElementById("buildingSelect").value;
+    const eSelect = document.getElementById("ecsSelect");
+    const match = database.find(d => d.building === bValue);
+    
+    eSelect.innerHTML = ""; // Clear old options
     if (match) {
-        const rowId = Date.now(); // Unique ID for tracking
-        const row = table.insertRow();
-        row.setAttribute("data-id", rowId);
-
-        // Cell 1: Building & ECS Code
-        row.insertCell(0).innerHTML = `<b>${match.building}</b> (${match.ecs})`;
-
-        // Cell 2: Validation Dropdown
-        row.insertCell(1).innerHTML = `
-            <select class="row-validation">
-                <option>1HAND_POS</option>
-                <option>2PREP_ALMT</option>
-                <option>3WELDING</option>
-                <option>4PUNCH</option>
-            </select>`;
-
-        // Cell 3: Remove Button
-        row.insertCell(2).innerHTML = `<button onclick="this.parentElement.parentElement.remove()">Delete</button>`;
-        
-        // Store technical data in an array or just read from DOM later
-        selectedRows.push({ id: rowId, building: match.building, ecs: match.ecs });
+        match.ecs_list.forEach(ecs => {
+            let opt = new Option(ecs, ecs);
+            eSelect.add(opt);
+        });
     }
 }
 
-// 3. Collect all data from the table and export to Excel
+// 3. Add to Table
+function addRow() {
+    const building = document.getElementById("buildingSelect").value;
+    const ecs = document.getElementById("ecsSelect").value;
+    const table = document.getElementById("ecsTable").getElementsByTagName('tbody')[0];
+
+    const row = table.insertRow();
+    
+    // Column 1: Building
+    row.insertCell(0).innerText = building;
+    
+    // Column 2: ECS Code
+    row.insertCell(1).innerText = ecs;
+
+    // Column 3: Validation Input
+    row.insertCell(2).innerHTML = `
+        <select class="val-input">
+            <option>1HAND_POS</option>
+            <option>2PREP_ALMT</option>
+            <option>3WELDING</option>
+            <option>4PUNCH</option>
+        </select>`;
+}
+
+// 4. Export
 function exportExcel() {
-    const table = document.getElementById("ecsTable");
-    const rows = table.querySelectorAll("tr");
-    let exportData = [];
+    const rows = document.querySelectorAll("#ecsTable tbody tr");
+    let data = Array.from(rows).map(tr => ({
+        "Building": tr.cells[0].innerText,
+        "ECS Code": tr.cells[1].innerText,
+        "Validation": tr.cells[2].querySelector("select").value
+    }));
 
-    // Skip the header row (index 0)
-    for (let i = 1; i < rows.length; i++) {
-        const buildingText = rows[i].cells[0].innerText;
-        const validationValue = rows[i].cells[1].querySelector("select").value;
-        
-        // Extract building and ecs from the text "B101 (ECS001)"
-        const building = buildingText.split(" (")[0];
-        const ecs = buildingText.split("(")[1].replace(")", "");
-
-        exportData.push({
-            "Building": building,
-            "ECS Code": ecs,
-            "Validation": validationValue
-        });
-    }
-
-    if(exportData.length === 0) return alert("Table is empty!");
-
-    const newSheet = XLSX.utils.json_to_sheet(exportData);
-    const newWorkbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(newWorkbook, newSheet, "ValidatedData");
-    XLSX.writeFile(newWorkbook, "manual_validation_output.xlsx");
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Collection");
+    XLSX.writeFile(wb, "Data_Collection.xlsx");
 }
