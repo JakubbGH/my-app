@@ -1,14 +1,10 @@
 [
   {
     "building": "B101",
-    "ecs_list": ["ECS-9901-A", "ECS-9901-B", "ECS-9901-C"]
+    "ecs_list": ["ECS-001", "ECS-002"]
   },
   {
     "building": "B102",
-    "ecs_list": ["ECS-9902-1", "ECS-9902-2"]
-  },
-  {
-    "building": "B205",
-    "ecs_list": ["ECS-8805-X", "ECS-8805-Y", "ECS-8805-Z"]
+    "ecs_list": ["ECS-003", "ECS-004"]
   }
 ]
