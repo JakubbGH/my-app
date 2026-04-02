@@ -1,49 +1,52 @@
-// 1. FALLBACK DATA: If the JSON fails to load, the app still works.
-let database = [
-    { "building": "TEST-B1", "ecs_list": ["ECS-TEST-01", "ECS-TEST-02"] }
-];
+let database = [];
 
-document.addEventListener("DOMContentLoaded", () => {
-    console.log("App Initialized. Fetching database...");
+// Initialize on page load
+window.onload = () => {
     loadData();
-});
+};
 
 async function loadData() {
+    const statusLabel = document.getElementById("syncStatus");
+    statusLabel.innerText = "Syncing...";
+    statusLabel.style.color = "orange";
+
     try {
-        // 2. USE A TIMESTAMP: This forces GitHub to give you the NEWEST version (prevents caching)
-        const response = await fetch(`./database.json?v=${new Date().getTime()}`);
+        // Cache-buster (?t=) ensures we get the latest file from GitHub Main branch
+        const cacheBuster = new Date().getTime();
+        const response = await fetch(`./database.json?t=${cacheBuster}`);
         
-        if (!response.ok) {
-            console.warn("database.json not found, using fallback data.");
-            renderBuildingDropdown();
-            return;
-        }
+        if (!response.ok) throw new Error("Database file not found on server.");
 
         const data = await response.json();
-        console.log("JSON Data Loaded Successfully:", data);
+        
+        if (!Array.isArray(data)) throw new Error("JSON format incorrect (expected array).");
 
-        if (data && data.length > 0) {
-            database = data;
-            renderBuildingDropdown();
-        }
+        database = data;
+        renderBuildingDropdown();
+
+        statusLabel.innerText = "Last Sync: " + new Date().toLocaleTimeString();
+        statusLabel.style.color = "green";
+        console.log("Database updated:", database);
+
     } catch (error) {
-        console.error("Critical Fetch Error:", error);
-        renderBuildingDropdown(); // Still render fallback so the UI isn't broken
+        console.error("Fetch error:", error);
+        statusLabel.innerText = "Sync Failed!";
+        statusLabel.style.color = "red";
     }
 }
 
 function renderBuildingDropdown() {
     const bSelect = document.getElementById("buildingSelect");
-    if (!bSelect) return console.error("Could not find buildingSelect in HTML");
-
-    bSelect.innerHTML = ""; // Clear "Loading..." or old options
+    bSelect.innerHTML = ""; // Clear existing options
     
     database.forEach(item => {
-        let opt = new Option(item.building, item.building);
-        bSelect.add(opt);
+        if (item.building) {
+            let opt = new Option(item.building, item.building);
+            bSelect.add(opt);
+        }
     });
 
-    console.log("Building dropdown populated.");
+    // Automatically refresh the ECS list for the first building
     updateEcsDropdown();
 }
 
@@ -52,27 +55,32 @@ function updateEcsDropdown() {
     const eSelect = document.getElementById("ecsSelect");
     const match = database.find(d => d.building === bValue);
     
-    eSelect.innerHTML = ""; 
+    eSelect.innerHTML = ""; // Clear existing options
+    
     if (match && match.ecs_list) {
         match.ecs_list.forEach(ecs => {
             eSelect.add(new Option(ecs, ecs));
         });
-        console.log(`ECS dropdown updated for ${bValue}`);
     }
 }
 
-// --- ADD ROW & EXCEL LOGIC ---
 function addRow() {
     const b = document.getElementById("buildingSelect").value;
     const e = document.getElementById("ecsSelect").value;
-    const tbody = document.querySelector("#ecsTable tbody");
     
+    if (!b || !e) {
+        alert("Please select a building and ECS code first.");
+        return;
+    }
+
+    const tbody = document.querySelector("#ecsTable tbody");
     const row = tbody.insertRow();
+    
     row.innerHTML = `
-        <td>${b}</td>
+        <td style="font-weight:bold;">${b}</td>
         <td>${e}</td>
         <td>
-            <select style="padding:10px; width:100%;">
+            <select class="row-val">
                 <option>1HAND_POS</option>
                 <option>2PREP_ALMT</option>
                 <option>3WELDING</option>
@@ -80,26 +88,32 @@ function addRow() {
             </select>
         </td>
         <td>
-            <button onclick="this.parentElement.parentElement.remove()" 
-                    style="background:#dc3545; color:white; border:none; padding:10px; font-weight:bold; width:100%; border-radius:5px;">
-                DEL
-            </button>
+            <button class="del-btn" onclick="this.parentElement.parentElement.remove()">DEL</button>
         </td>
     `;
 }
 
 function exportExcel() {
     const rows = document.querySelectorAll("#ecsTable tbody tr");
-    if(rows.length === 0) return alert("Add data first!");
+    
+    if (rows.length === 0) {
+        alert("The table is empty. Add some data before exporting.");
+        return;
+    }
 
-    let exportData = Array.from(rows).map(tr => ({
+    // Map table rows to JSON data for Excel
+    const exportData = Array.from(rows).map(tr => ({
         "Building": tr.cells[0].innerText,
         "ECS Code": tr.cells[1].innerText,
-        "Validation": tr.cells[2].querySelector("select").value
+        "Validation Type": tr.cells[2].querySelector("select").value
     }));
 
+    // Create Excel Workbook
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Collection");
-    XLSX.writeFile(wb, "Field_Data.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "FieldData");
+
+    // Download the file
+    const dateStr = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `ECS_Validation_${dateStr}.xlsx`);
 }
