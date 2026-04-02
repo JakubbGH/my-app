@@ -1,22 +1,14 @@
 [
-  {"building": "B101", "ecs": "ECS-9901"},
-  {"building": "B102", "ecs": "ECS-9902"},
-  {"building": "B103", "ecs": "ECS-9903"},
-  {"building": "B104", "ecs": "ECS-9904"},
-  {"building": "B105", "ecs": "ECS-9905"},
-  {"building": "B201", "ecs": "ECS-8801"},
-  {"building": "B202", "ecs": "ECS-8802"},
-  {"building": "B203", "ecs": "ECS-8803"},
-  {"building": "B204", "ecs": "ECS-8804"},
-  {"building": "B205", "ecs": "ECS-8805"},
-  {"building": "C301", "ecs": "ECS-7701"},
-  {"building": "C302", "ecs": "ECS-7702"},
-  {"building": "C303", "ecs": "ECS-7703"},
-  {"building": "C401", "ecs": "ECS-6601"},
-  {"building": "C402", "ecs": "ECS-6602"},
-  {"building": "D501", "ecs": "ECS-5501"},
-  {"building": "D502", "ecs": "ECS-5502"},
-  {"building": "D503", "ecs": "ECS-5503"},
-  {"building": "HQ-Alpha", "ecs": "ECS-1000"},
-  {"building": "HQ-Beta", "ecs": "ECS-2000"}
+  {
+    "building": "B101",
+    "ecs_list": ["ECS-9901-A", "ECS-9901-B", "ECS-9901-C"]
+  },
+  {
+    "building": "B102",
+    "ecs_list": ["ECS-9902-1", "ECS-9902-2"]
+  },
+  {
+    "building": "B205",
+    "ecs_list": ["ECS-8805-X", "ECS-8805-Y", "ECS-8805-Z"]
+  }
 ]
