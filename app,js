@@ -1,40 +1,54 @@
-let buildingsData = [];
+let database = []
 
-fetch("buildings.json")
+fetch("database.json")
 .then(res => res.json())
-.then(data => {
+.then(data => database = data)
 
-    buildingsData = data;
 
-    let table = document.getElementById("preview");
+function processFile(){
 
-    data.forEach(row => {
+let file = document.getElementById("excelFile").files[0]
 
-        let tr = table.insertRow();
+let reader = new FileReader()
 
-        tr.insertCell(0).innerText = row.building;
-        tr.insertCell(1).innerText = row.ecs;
-        tr.insertCell(2).innerText = "";
+reader.onload = function(e){
 
-    });
+let data = new Uint8Array(e.target.result)
 
-});
+let workbook = XLSX.read(data,{type:"array"})
 
-function exportExcel(){
+let sheet = workbook.Sheets[workbook.SheetNames[0]]
 
-    let validation = document.getElementById("validation").value;
+let json = XLSX.utils.sheet_to_json(sheet)
 
-    let output = buildingsData.map(r => ({
-        Building: r.building,
-        "ECS Code": r.ecs,
-        Validation: validation
-    }));
+let validation = document.getElementById("validation").value
 
-    let ws = XLSX.utils.json_to_sheet(output);
-    let wb = XLSX.utils.book_new();
 
-    XLSX.utils.book_append_sheet(wb, ws, "ECS");
+json.forEach(row => {
 
-    XLSX.writeFile(wb,"ecs_validation.xlsx");
+let match = database.find(d => d.building == row.Building)
+
+if(match){
+
+row["ECS Code"] = match.ecs
+
+}
+
+row["Validation"] = validation
+
+})
+
+
+let newSheet = XLSX.utils.json_to_sheet(json)
+
+let newWorkbook = XLSX.utils.book_new()
+
+XLSX.utils.book_append_sheet(newWorkbook,newSheet,"Validated")
+
+XLSX.writeFile(newWorkbook,"validated_output.xlsx")
+
+}
+
+reader.readAsArrayBuffer(file)
 
 }
