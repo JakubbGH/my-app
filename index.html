@@ -1,34 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ECS Validation Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="app.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        
+        /* Big UI Elements */
+        select, button { 
+            padding: 15px; 
+            font-size: 18px; 
+            margin: 5px; 
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        .controls { background: #f9f9f9; padding: 20px; border: 2px solid #ddd; border-radius: 10px; }
+
+        .add-btn { background-color: #28a745; color: white; font-weight: bold; cursor: pointer; }
+        
+        .export-btn { 
+            background-color: #007bff; color: white; width: 100%; 
+            margin-top: 20px; font-weight: bold; height: 60px;
+        }
+
+        /* Table Styling */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #444; color: white; }
+
+        /* Delete Button */
+        .delete-btn { 
+            background-color: #dc3545; color: white; border: none; 
+            padding: 10px 20px; font-weight: bold; cursor: pointer;
+        }
+        
+        .val-input { width: 100%; min-width: 150px; }
+    </style>
+</head>
+
 <body>
 
-    <h2>Field Data Collection</h2>
+    <h2>ECS Field Tool</h2>
 
-    <div style="background: #f0f0f0; padding: 15px; border: 1px solid #ccc;">
-        <label>Building:</label>
-        <select id="buildingSelect" onchange="updateEcsDropdown()"></select>
+    <div class="controls">
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            <label><strong>Building:</strong></label>
+            <select id="buildingSelect" onchange="updateEcsDropdown()"></select>
 
-        <label style="margin-left:15px;">ECS Code:</label>
-        <select id="ecsSelect"></select>
+            <label><strong>ECS Object:</strong></label>
+            <select id="ecsSelect"></select>
 
-        <button onclick="addRow()" style="margin-left:15px;">+ Add to List</button>
+            <button class="add-btn" onclick="addRow()">+ ADD ROW TO TABLE</button>
+        </div>
     </div>
 
-    <br>
-
-    <table id="ecsTable" border="1" style="width: 100%; border-collapse: collapse; text-align: left;">
+    <table id="ecsTable">
         <thead>
-            <tr style="background: #444; color: white;">
+            <tr>
                 <th>Building</th>
                 <th>ECS Code</th>
-                <th>Validation Status</th>
+                <th>Validation</th>
+                <th>Remove</th>
             </tr>
         </thead>
-        <tbody>
-            </tbody>
+        <tbody></tbody>
     </table>
 
-    <br>
-    <button onclick="exportExcel()" style="padding: 10px 20px; cursor: pointer;">
-        Save & Export to Excel
-    </button>
+    <button class="export-btn" onclick="exportExcel()">GENERATE EXCEL FILE</button>
 
 </body>
+</html>
