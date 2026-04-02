@@ -1,54 +1,78 @@
-let database = []
+let database = [];
+let selectedRows = []; // To track data added to the table
 
+// 1. Load the database and populate the Building dropdown
 fetch("database.json")
-.then(res => res.json())
-.then(data => database = data)
+    .then(res => res.json())
+    .then(data => {
+        database = data;
+        const select = document.getElementById("buildingSelect");
+        
+        database.forEach(item => {
+            let option = document.createElement("option");
+            option.value = item.building;
+            option.text = item.building;
+            select.appendChild(option);
+        });
+    });
 
+// 2. Add selected building to the table
+function addRow() {
+    const buildingCode = document.getElementById("buildingSelect").value;
+    const match = database.find(d => d.building === buildingCode);
+    const table = document.getElementById("ecsTable");
 
-function processFile(){
+    if (match) {
+        const rowId = Date.now(); // Unique ID for tracking
+        const row = table.insertRow();
+        row.setAttribute("data-id", rowId);
 
-let file = document.getElementById("excelFile").files[0]
+        // Cell 1: Building & ECS Code
+        row.insertCell(0).innerHTML = `<b>${match.building}</b> (${match.ecs})`;
 
-let reader = new FileReader()
+        // Cell 2: Validation Dropdown
+        row.insertCell(1).innerHTML = `
+            <select class="row-validation">
+                <option>1HAND_POS</option>
+                <option>2PREP_ALMT</option>
+                <option>3WELDING</option>
+                <option>4PUNCH</option>
+            </select>`;
 
-reader.onload = function(e){
-
-let data = new Uint8Array(e.target.result)
-
-let workbook = XLSX.read(data,{type:"array"})
-
-let sheet = workbook.Sheets[workbook.SheetNames[0]]
-
-let json = XLSX.utils.sheet_to_json(sheet)
-
-let validation = document.getElementById("validation").value
-
-
-json.forEach(row => {
-
-let match = database.find(d => d.building == row.Building)
-
-if(match){
-
-row["ECS Code"] = match.ecs
-
+        // Cell 3: Remove Button
+        row.insertCell(2).innerHTML = `<button onclick="this.parentElement.parentElement.remove()">Delete</button>`;
+        
+        // Store technical data in an array or just read from DOM later
+        selectedRows.push({ id: rowId, building: match.building, ecs: match.ecs });
+    }
 }
 
-row["Validation"] = validation
+// 3. Collect all data from the table and export to Excel
+function exportExcel() {
+    const table = document.getElementById("ecsTable");
+    const rows = table.querySelectorAll("tr");
+    let exportData = [];
 
-})
+    // Skip the header row (index 0)
+    for (let i = 1; i < rows.length; i++) {
+        const buildingText = rows[i].cells[0].innerText;
+        const validationValue = rows[i].cells[1].querySelector("select").value;
+        
+        // Extract building and ecs from the text "B101 (ECS001)"
+        const building = buildingText.split(" (")[0];
+        const ecs = buildingText.split("(")[1].replace(")", "");
 
+        exportData.push({
+            "Building": building,
+            "ECS Code": ecs,
+            "Validation": validationValue
+        });
+    }
 
-let newSheet = XLSX.utils.json_to_sheet(json)
+    if(exportData.length === 0) return alert("Table is empty!");
 
-let newWorkbook = XLSX.utils.book_new()
-
-XLSX.utils.book_append_sheet(newWorkbook,newSheet,"Validated")
-
-XLSX.writeFile(newWorkbook,"validated_output.xlsx")
-
-}
-
-reader.readAsArrayBuffer(file)
-
+    const newSheet = XLSX.utils.json_to_sheet(exportData);
+    const newWorkbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(newWorkbook, newSheet, "ValidatedData");
+    XLSX.writeFile(newWorkbook, "manual_validation_output.xlsx");
 }
