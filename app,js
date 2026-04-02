@@ -1,15 +1,27 @@
 let database = [];
 
+// Fetch data from your directory
 fetch("database.json")
-    .then(res => res.json())
+    .then(res => {
+        if (!res.ok) throw new Error("Could not load database.json");
+        return res.json();
+    })
     .then(data => {
         database = data;
         const bSelect = document.getElementById("buildingSelect");
+        
+        // Populate Buildings
         database.forEach(item => {
             let opt = new Option(item.building, item.building);
             bSelect.add(opt);
         });
+
+        // Initialize ECS list for the first building
         updateEcsDropdown();
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Error: Cannot access database.json. Ensure you are running this on a server/GitHub Pages.");
     });
 
 function updateEcsDropdown() {
@@ -17,53 +29,51 @@ function updateEcsDropdown() {
     const eSelect = document.getElementById("ecsSelect");
     const match = database.find(d => d.building === bValue);
     
-    eSelect.innerHTML = ""; 
-    if (match) {
+    eSelect.innerHTML = ""; // Clear
+    if (match && match.ecs_list) {
         match.ecs_list.forEach(ecs => {
-            let opt = new Option(ecs, ecs);
-            eSelect.add(opt);
+            eSelect.add(new Option(ecs, ecs));
         });
     }
 }
 
 function addRow() {
-    const building = document.getElementById("buildingSelect").value;
-    const ecs = document.getElementById("ecsSelect").value;
-    const table = document.getElementById("ecsTable").getElementsByTagName('tbody')[0];
+    const b = document.getElementById("buildingSelect").value;
+    const e = document.getElementById("ecsSelect").value;
+    if(!b || !e) return;
 
-    const row = table.insertRow();
+    const tbody = document.querySelector("#ecsTable tbody");
+    const row = tbody.insertRow();
     
-    row.insertCell(0).innerText = building;
-    row.insertCell(1).innerText = ecs;
-
-    // Validation Dropdown
-    row.insertCell(2).innerHTML = `
-        <select class="val-input">
-            <option>1HAND_POS</option>
-            <option>2PREP_ALMT</option>
-            <option>3WELDING</option>
-            <option>4PUNCH</option>
-        </select>`;
-
-    // BIG DELETE BUTTON
-    row.insertCell(3).innerHTML = `
-        <button class="delete-btn" onclick="this.parentElement.parentElement.remove()">
-            DELETE
-        </button>`;
+    row.innerHTML = `
+        <td>${b}</td>
+        <td>${e}</td>
+        <td>
+            <select class="val-select">
+                <option>1HAND_POS</option>
+                <option>2PREP_ALMT</option>
+                <option>3WELDING</option>
+                <option>4PUNCH</option>
+            </select>
+        </td>
+        <td>
+            <button class="del-btn" onclick="this.parentElement.parentElement.remove()">DEL</button>
+        </td>
+    `;
 }
 
 function exportExcel() {
     const rows = document.querySelectorAll("#ecsTable tbody tr");
     if(rows.length === 0) return alert("No data to export!");
 
-    let data = Array.from(rows).map(tr => ({
+    let exportData = Array.from(rows).map(tr => ({
         "Building": tr.cells[0].innerText,
         "ECS Code": tr.cells[1].innerText,
         "Validation": tr.cells[2].querySelector("select").value
     }));
 
-    const ws = XLSX.utils.json_to_sheet(data);
+    const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Collection");
-    XLSX.writeFile(wb, `Data_Export_${new Date().toLocaleDateString()}.xlsx`);
+    XLSX.writeFile(wb, "Data_Collection.xlsx");
 }
