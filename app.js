@@ -1,4 +1,4 @@
-// --- 1. CONFIG ---
+// --- 1. FIREBASE INITIALIZATION ---
 const firebaseConfig = {
     apiKey: "AIzaSyDBkF2EJxgk4buiqUak-ZCLfKcPzpX7gsw",
     authDomain: "ecs-tool.firebaseapp.com",
@@ -15,10 +15,10 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 let database = [];
 
-// FORCES PERSISTENT LOGIN
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+// FORCES LOGOUT ON TAB CLOSE
+auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
 
-// --- 2. AUTH LISTENER (Prevents random logouts) ---
+// --- 2. AUTH LISTENER ---
 auth.onAuthStateChanged((user) => {
     const loginOverlay = document.getElementById("loginOverlay");
     const mainApp = document.getElementById("mainApp");
@@ -32,6 +32,7 @@ auth.onAuthStateChanged((user) => {
     } else {
         loginOverlay.style.display = "flex";
         mainApp.style.display = "none";
+        adminSection.style.display = "none";
     }
 });
 
@@ -43,17 +44,20 @@ async function handleLogin() {
     } catch (e) {
         const err = document.getElementById("loginError");
         err.style.display = "block";
-        err.innerText = e.message;
+        err.innerText = "Error: " + e.message;
     }
 }
 
-// --- 3. DATA CORE ---
+// --- 3. DATA LOADING ---
 async function loadDataFromCloud() {
     const status = document.getElementById("syncStatus");
     status.innerText = "Syncing...";
     try {
         const snap = await db.collection("buildings").get();
-        database = snap.docs.map(doc => ({ building: doc.id, ecs_list: doc.data().ecs_list || [] }));
+        database = snap.docs.map(doc => ({ 
+            building: doc.id, 
+            ecs_list: doc.data().ecs_list || [] 
+        }));
         
         const bSelect = document.getElementById("buildingSelect");
         bSelect.innerHTML = "";
@@ -62,16 +66,21 @@ async function loadDataFromCloud() {
         
         status.innerText = "Cloud Active";
         status.style.background = "#d4edda";
-    } catch (e) { status.innerText = "Offline"; }
+    } catch (e) { 
+        status.innerText = "Offline"; 
+        status.style.background = "#f8d7da";
+    }
 }
 
+// --- 4. TABLE LOGIC (Duplicate Check) ---
 function loadBuildingToTable() {
     const bValue = document.getElementById("buildingSelect").value;
     const tbody = document.querySelector("#ecsTable tbody");
     if (!bValue || bValue === "Loading...") return;
 
-    const existing = Array.from(tbody.rows).some(row => row.cells[0].innerText === bValue);
-    if (existing) return alert(`Building ${bValue} is already loaded.`);
+    // Duplicate Check
+    const isAlreadyLoaded = Array.from(tbody.rows).some(row => row.cells[0].innerText === bValue);
+    if (isAlreadyLoaded) return alert(`⚠️ Building ${bValue} is already in the table.`);
 
     const match = database.find(d => d.building === bValue);
     if (match) {
@@ -80,18 +89,21 @@ function loadBuildingToTable() {
             row.innerHTML = `
                 <td style="font-weight:bold">${bValue}</td>
                 <td>${ecs}</td>
-                <td><select style="width:100%;"><option>1HAND_POS</option><option>2PREP_ALMT</option><option>3WELDING</option><option>4PUNCH</option></select></td>
+                <td><select style="width:100%; padding:5px; border-radius:4px; border:1px solid #ccc;">
+                    <option>1HAND_POS</option><option>2PREP_ALMT</option><option>3WELDING</option><option>4PUNCH</option>
+                </select></td>
                 <td><button class="del-btn" onclick="this.parentElement.parentElement.remove()">DEL</button></td>
             `;
         });
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     }
 }
 
-// --- 4. CLOUD SYNC ---
+// --- 5. SUBMIT TO CLOUD ---
 async function saveToCloud() {
     const rows = document.querySelectorAll("#ecsTable tbody tr");
     const btn = document.getElementById("mainSaveBtn");
-    if (rows.length === 0) return alert("Table is empty.");
+    if (rows.length === 0) return alert("❌ Table is empty.");
 
     const reportData = Array.from(rows).map(tr => ({
         building: tr.cells[0].innerText,
@@ -101,21 +113,23 @@ async function saveToCloud() {
 
     try {
         btn.disabled = true;
-        btn.innerText = "⏳ SAVING...";
+        btn.innerText = "⏳ SYNCING...";
         const reportID = `${reportData[0].building}_${Date.now()}`;
         await db.collection("reports").doc(reportID).set({
             data: reportData,
             user: auth.currentUser.email,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
-        alert("✅ Success!");
+        alert("✅ SUCCESS: Data saved to cloud.");
         document.querySelector("#ecsTable tbody").innerHTML = "";
-    } catch (e) { alert("Error: " + e.message); }
+    } catch (e) { 
+        alert("⚠️ Cloud Error: " + e.message); 
+    }
     btn.disabled = false;
     btn.innerText = "UPLOAD TO CLOUD";
 }
 
-// --- 5. ADMIN TOOLS (NO RELOADS) ---
+// --- 6. ADMIN: CSV IMPORT ---
 document.getElementById('csvFileInput').addEventListener('change', (e) => {
     if (e.target.files.length > 0) document.getElementById('uploadCsvBtn').style.display = 'block';
 });
@@ -135,67 +149,57 @@ async function processCSV() {
                 batch.set(db.collection("buildings").doc(cols[0].trim()), { ecs_list: codes });
             }
             await batch.commit();
-            alert("✅ Database Updated!");
-            loadDataFromCloud(); // Live UI refresh
+            alert("✅ Building list updated!");
+            loadDataFromCloud();
             btn.style.display = 'none';
-        } catch (err) { alert(err.message); }
+        } catch (err) { alert("CSV Error: " + err.message); }
     };
     reader.readAsText(file);
 }
 
+// --- 7. ADMIN: EXPORT WITH SAFETY CHECK ---
 async function exportAllReports() {
     try {
         const snap = await db.collection("reports").get();
-        
-        if (snap.empty) {
-            return alert("No reports found in the cloud.");
-        }
+        if (snap.empty) return alert("No reports in cloud.");
 
-        let csv = "Building,ECS Code,Status,Tech User,Timestamp\n";
-        
+        let csv = "Building,ECS,Status,User,Time\n";
         snap.forEach(doc => {
-            const report = doc.data();
-            const time = report.timestamp ? report.timestamp.toDate().toLocaleString() : "N/A";
-            const user = report.user || "Unknown User";
-
-            // SAFETY CHECK: Only loop if 'data' exists and is an array
-            if (report.data && Array.isArray(report.data)) {
-                report.data.forEach(item => {
-                    // Use quotes to prevent commas in names from breaking the CSV
-                    csv += `"${item.building || "N/A"}","${item.ecs_code || "N/A"}","${item.status || "N/A"}","${user}","${time}"\n`;
-                });
-            } else {
-                console.warn(`Skipping report ${doc.id}: 'data' field is missing or invalid.`);
+            const r = doc.data();
+            const time = r.timestamp ? r.timestamp.toDate().toLocaleString() : "";
+            // Check if data is an array before looping
+            if (r.data && Array.isArray(r.data)) {
+                r.data.forEach(i => csv += `"${i.building}","${i.ecs_code}","${i.status}","${r.user}","${time}"\n`);
             }
         });
-
-        // Create the download
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([csv], { type: 'text/csv' });
         const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        
-        link.setAttribute("href", url);
-        link.setAttribute("download", `Master_Export_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
+        link.href = URL.createObjectURL(blob);
+        link.download = `ECS_Export_${Date.now()}.csv`;
         link.click();
-        document.body.removeChild(link);
-        
-        alert("✅ Export successful! Check your downloads folder.");
+    } catch (e) { alert("Export Error: " + e.message); }
+}
 
-    } catch (e) { 
-        console.error("Full Export Error:", e);
-        alert("❌ Export failed: " + e.message); 
-    }
+// --- 8. ADMIN: WIPE FUNCTIONS ---
+async function clearAllReports() {
+    if (!confirm("⚠️ DELETE ALL REPORT HISTORY? This cannot be undone.")) return;
+    try {
+        const snap = await db.collection("reports").get();
+        const batch = db.batch();
+        snap.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        alert("✅ Report history cleared.");
+    } catch (e) { alert(e.message); }
 }
 
 async function wipeAllBuildings() {
-    if (!confirm("Wipe all buildings?")) return;
+    if (!confirm("⚠️ WIPE MASTER BUILDING LIST? Technicians will have nothing to load.")) return;
     try {
         const snap = await db.collection("buildings").get();
         const batch = db.batch();
         snap.forEach(d => batch.delete(d.ref));
         await batch.commit();
-        alert("Wiped.");
+        alert("✅ Master list wiped.");
         database = [];
         document.getElementById("buildingSelect").innerHTML = "<option>Empty</option>";
     } catch (e) { alert(e.message); }
