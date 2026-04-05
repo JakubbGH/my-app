@@ -1,12 +1,12 @@
 // --- 1. CONFIGURATION ---
 // Replace these with the keys from your Firebase Console (Project Settings)
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyDBkF2EJxgk4buiqUak-ZCLfKcPzpX7gsw",
+    authDomain: "ecs-tool.firebaseapp.com",
+    projectId: "ecs-tool",
+    storageBucket: "ecs-tool.firebasestorage.app",
+    messagingSenderId: "796028644982",
+    appId: "1:796028644982:web:d6953c3ce305734d7a3957"
 };
 
 // Initialize Firebase Services
