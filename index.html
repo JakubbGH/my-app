@@ -84,11 +84,11 @@
         <div id="adminSection">
             <label style="color: var(--purple);">Admin Master Controls</label>
             <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
-            <button class="btn-admin" onclick="document.getElementById('csvFileInput').click()">Import Building CSV</button>
+            <button class="btn-admin" onclick="document.getElementById('csvFileInput').click()">Import Building (CSV)</button>
             <button id="uploadCsvBtn" class="btn-admin" style="background:#e83e8c; display:none;" onclick="processCSV()">Confirm CSV Upload</button>
             <button class="btn-admin" style="background:var(--info);" onclick="exportAllReports()">Export All Reports (CSV)</button>
             <button class="btn-admin" style="background:var(--gray);" onclick="clearAllReports()">Clear Report History</button>
-            <button class="btn-admin" style="background:var(--danger);" onclick="wipeAllBuildings()">Wipe Master Building List</button>
+            <button class="btn-admin" style="background:var(--danger);" onclick="wipeAllBuildings()">Clear Master Building List</button>
         </div>
     </div>
 
