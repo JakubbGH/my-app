@@ -126,7 +126,7 @@ async function saveToCloud() {
         alert("⚠️ Cloud Error: " + e.message); 
     }
     btn.disabled = false;
-    btn.innerText = "UPLOAD TO CLOUD";
+    btn.innerText = "SAVE REPORT";
 }
 
 // --- 6. ADMIN: CSV IMPORT ---
