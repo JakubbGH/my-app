@@ -1,4 +1,4 @@
-// --- 1. FIREBASE CONFIGURATION ---
+// --- 1. CONFIGURATION ---
 const firebaseConfig = {
     apiKey: "AIzaSyDBkF2EJxgk4buiqUak-ZCLfKcPzpX7gsw",
     authDomain: "ecs-tool.firebaseapp.com",
@@ -15,7 +15,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 let database = [];
 
-// --- 2. LOGIN LOGIC ---
+// --- 2. LOGIN & AUTH ---
 async function handleLogin() {
     const email = document.getElementById("emailInput").value.trim();
     const pass = document.getElementById("passInput").value;
@@ -25,19 +25,16 @@ async function handleLogin() {
         const userCred = await auth.signInWithEmailAndPassword(email, pass);
         const user = userCred.user;
 
-        // Show Admin controls if email matches
         if (user.email === ADMIN_EMAIL) {
             document.getElementById("adminSection").style.display = "block";
         }
 
-        // Switch UI
         document.getElementById("loginOverlay").style.display = "none";
         document.getElementById("mainApp").style.display = "block";
-        
         loadDataFromCloud();
     } catch (e) {
         errorMsg.style.display = "block";
-        errorMsg.innerText = "Login Failed: " + e.message;
+        errorMsg.innerText = "Login Error: " + e.message;
     }
 }
 
@@ -54,62 +51,53 @@ async function loadDataFromCloud() {
         
         const bSelect = document.getElementById("buildingSelect");
         bSelect.innerHTML = "";
-        
         database.sort((a, b) => a.building.localeCompare(b.building))
                 .forEach(item => bSelect.add(new Option(item.building, item.building)));
         
         statusLabel.innerText = "Cloud Active";
         statusLabel.style.background = "#d4edda";
-        statusLabel.style.color = "#155724";
     } catch (e) {
-        statusLabel.innerText = "Sync Error";
-        statusLabel.style.background = "#f8d7da";
-        statusLabel.style.color = "#721c24";
+        statusLabel.innerText = "Offline/Error";
     }
 }
 
-// --- 4. TABLE LOGIC (With Duplicate Check) ---
+// --- 4. LOAD PLOW DATA (With Duplicate Check) ---
 function loadBuildingToTable() {
     const bValue = document.getElementById("buildingSelect").value;
     const tbody = document.querySelector("#ecsTable tbody");
     
-    // DUPLICATE CHECK: Look at the first column of all existing rows
-    const existingRows = tbody.querySelectorAll("tr");
-    for (let row of existingRows) {
-        if (row.cells[0].innerText === bValue) {
-            alert(`⚠️ WARNING: Building ${bValue} is already added to the table.`);
-            return; // Stop the function here
-        }
+    if (!bValue || bValue === "Loading buildings...") return;
+
+    // PREVENT MULTIPLE SELECTIONS: check if building is already in table
+    const existing = Array.from(tbody.rows).some(row => row.cells[0].innerText === bValue);
+    if (existing) {
+        alert(`Building ${bValue} is already loaded.`);
+        return;
     }
 
     const match = database.find(d => d.building === bValue);
-    if (!match) return;
-
-    match.ecs_list.forEach(ecs => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td style="font-weight:bold">${bValue}</td>
-            <td>${ecs}</td>
-            <td>
-                <select style="width:100%; padding:5px;">
-                    <option>1HAND_POS</option>
-                    <option>2PREP_ALMT</option>
-                    <option>3WELDING</option>
-                    <option>4PUNCH</option>
-                </select>
-            </td>
-            <td><button class="del-btn" onclick="this.parentElement.parentElement.remove()">DEL</button></td>
-        `;
-    });
+    if (match) {
+        match.ecs_list.forEach(ecs => {
+            const row = tbody.insertRow();
+            row.innerHTML = `
+                <td style="font-weight:bold">${bValue}</td>
+                <td>${ecs}</td>
+                <td><select style="width:100%; border-radius:4px; border:1px solid #ddd; padding:4px;">
+                    <option>1HAND_POS</option><option>2PREP_ALMT</option><option>3WELDING</option><option>4PUNCH</option>
+                </select></td>
+                <td><button class="del-btn" onclick="this.parentElement.parentElement.remove()">DEL</button></td>
+            `;
+        });
+    }
 }
 
-// --- 5. SAVE REPORT (With Popups) ---
+// --- 5. SAVE REPORT (Cloud Sync) ---
 async function saveToCloud() {
     const rows = document.querySelectorAll("#ecsTable tbody tr");
     const btn = document.getElementById("mainSaveBtn");
-    if (rows.length === 0) return alert("❌ Table is empty. Load data first.");
+    if (rows.length === 0) return alert("❌ Table is empty.");
 
-    const reportData = Array.from(rows).map(tr => ({
+    const reportEntries = Array.from(rows).map(tr => ({
         building: tr.cells[0].innerText,
         ecs_code: tr.cells[1].innerText,
         status: tr.cells[2].querySelector("select").value
@@ -117,21 +105,20 @@ async function saveToCloud() {
 
     try {
         btn.disabled = true;
-        btn.innerText = "⏳ SYNCING...";
+        btn.innerText = "⏳ SAVING...";
         btn.style.background = "#ffc107";
 
-        const reportID = `${reportData[0].building}_${Date.now()}`;
+        const reportID = `${reportEntries[0].building}_${Date.now()}`;
         await db.collection("reports").doc(reportID).set({
-            data: reportData,
+            data: reportEntries,
             user: auth.currentUser.email,
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        alert(`✅ SUCCESS!\nValidation for ${reportData[0].building} saved.`);
+        alert("✅ SUCCESS: Data synced to Cloud.");
         btn.style.background = "#28a745";
-        btn.innerText = "✅ UPLOADED";
+        btn.innerText = "✅ SUCCESS";
         
-        // Reset after success
         setTimeout(() => {
             document.querySelector("#ecsTable tbody").innerHTML = "";
             btn.disabled = false;
@@ -139,9 +126,9 @@ async function saveToCloud() {
             btn.style.background = "#007bff";
         }, 1500);
     } catch (e) {
-        alert("⚠️ CLOUD ERROR: " + e.message);
+        alert("⚠️ FAILED: " + e.message);
         btn.disabled = false;
-        btn.innerText = "RETRY UPLOAD";
+        btn.innerText = "RETRY SYNC";
         btn.style.background = "#dc3545";
     }
 }
@@ -157,7 +144,7 @@ async function processCSV() {
     const reader = new FileReader();
     reader.onload = async (e) => {
         try {
-            btn.innerText = "PROCESSING...";
+            btn.innerText = "SYNCING...";
             const rows = e.target.result.split('\n').filter(r => r.trim() !== '');
             const batch = db.batch();
             for (let i = 1; i < rows.length; i++) {
@@ -168,20 +155,20 @@ async function processCSV() {
                 batch.set(db.collection("buildings").doc(bName), { ecs_list: codes });
             }
             await batch.commit();
-            alert("✅ Building Master List Updated!");
+            alert("✅ Cloud Database Updated!");
             location.reload();
-        } catch (err) { alert("❌ CSV Error: " + err.message); }
+        } catch (err) { alert("❌ Error: " + err.message); }
     };
     reader.readAsText(file);
 }
 
-// --- 7. ADMIN: EXPORT ALL ---
+// --- 7. ADMIN: EXPORT ALL REPORTS ---
 async function exportAllReports() {
     try {
         const snap = await db.collection("reports").get();
-        if (snap.empty) return alert("No reports found in the cloud.");
+        if (snap.empty) return alert("No reports in cloud.");
         
-        let csv = "Building,ECS Code,Status,Tech User,Timestamp\n";
+        let csv = "Building,ECS,Status,User,Time\n";
         snap.forEach(doc => {
             const r = doc.data();
             const time = r.timestamp ? r.timestamp.toDate().toLocaleString() : "N/A";
@@ -193,20 +180,20 @@ async function exportAllReports() {
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
-        link.download = `Master_Validation_Export_${new Date().toISOString().split('T')[0]}.csv`;
+        link.download = "Master_Field_Export.csv";
         link.click();
-    } catch (e) { alert("Export Error: " + e.message); }
+    } catch (e) { alert(e.message); }
 }
 
-// --- 8. ADMIN: WIPE BUILDINGS ---
+// --- 8. ADMIN: WIPE ---
 async function wipeAllBuildings() {
-    if (!confirm("⚠️ DANGER: This will delete ALL buildings from the load menu. Are you sure?")) return;
+    if (!confirm("⚠️ DELETE ALL BUILDINGS?")) return;
     try {
         const snap = await db.collection("buildings").get();
         const batch = db.batch();
         snap.forEach(d => batch.delete(d.ref));
         await batch.commit();
-        alert("✅ Building list wiped.");
+        alert("Database Cleared.");
         location.reload();
-    } catch (e) { alert("Wipe failed: " + e.message); }
+    } catch (e) { alert(e.message); }
 }
