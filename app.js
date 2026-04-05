@@ -3,6 +3,41 @@ let database = [];
 // Initialize on load
 window.onload = () => { loadData(); };
 
+// Paste the Config you copied from the Firebase Console here:
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "your-app.firebaseapp.com",
+    projectId: "your-app",
+    storageBucket: "your-app.appspot.com",
+    messagingSenderId: "...",
+    appId: "..."
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
+async function checkLogin() {
+    const email = document.getElementById("username").value; // Firebase needs an email format
+    const pass = document.getElementById("password").value;
+    const errorMsg = document.getElementById("loginError");
+
+    try {
+        // This is the secure "Handshake" with Google's servers
+        const userCredential = await firebase.auth().signInWithEmailAndPassword(email, pass);
+        
+        // Success!
+        console.log("Logged in as:", userCredential.user.email);
+        document.getElementById("loginOverlay").style.display = "none";
+        document.getElementById("mainApp").style.display = "block";
+        loadData(); // Your existing function to load database.json
+    } catch (error) {
+        // Failure
+        console.error("Login failed:", error.message);
+        errorMsg.style.display = "block";
+        errorMsg.innerText = "Access Denied: " + error.message;
+    }
+}
+
 async function loadData() {
     const statusLabel = document.getElementById("syncStatus");
     statusLabel.innerText = "Syncing...";
