@@ -11,7 +11,6 @@
     <style>
         :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --info: #17a2b8; --dark: #2c3e50; --purple: #6f42c1; --gray: #6c757d; }
         
-        /* NO REFRESH LOGIC */
         html, body {
             height: 100%;
             width: 100%;
@@ -40,18 +39,18 @@
         
         .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
         .btn-load { background: var(--success); color: white; }
-        .btn-refresh { background: #eee; color: #333; font-size: 12px; padding: 6px 12px; width: auto; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
+        .btn-refresh { background: #eee; color: #333; font-size: 11px; padding: 6px 12px; width: auto; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; text-transform: uppercase; }
 
         .table-container { background: white; border-radius: 10px; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; min-width: 450px; }
         th { background: #f8f9fa; padding: 12px; text-align: left; font-size: 12px; color: #777; border-bottom: 2px solid #eee; }
         td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
-        .del-btn { background: var(--danger); color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; }
+        .del-btn { background: var(--danger); color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; }
 
         #adminSection { display: none; border-top: 2px dashed #eee; margin-top: 20px; padding-top: 20px; }
-        .btn-admin { background: var(--purple); color: white; margin-top: 10px; padding: 12px; font-size: 14px; width: 100%; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .btn-admin { background: var(--purple); color: white; margin-top: 10px; padding: 12px; font-size: 14px; width: 100%; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
 
-        .export-btn { position: fixed; bottom: 20px; left: 5%; width: 90%; padding: 20px; background: var(--primary); color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,123,255,0.4); z-index: 999; }
+        .export-btn { position: fixed; bottom: 20px; left: 5%; width: 90%; padding: 20px; background: var(--primary); color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 5px 15px rgba(0,123,255,0.4); z-index: 999; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -61,33 +60,33 @@
         <h2>ECS Field Tool</h2>
         <input type="email" id="emailInput" placeholder="Email">
         <input type="password" id="passInput" placeholder="Password">
-        <button onclick="handleLogin()">Sign In</button>
+        <button onclick="handleLogin()">SIGN IN</button>
         <p id="loginError" style="color:var(--danger); display:none; margin-top:15px; font-size: 14px;"></p>
     </div>
 </div>
 
 <div id="mainApp">
     <div class="status-bar">
-        <h2 style="margin:0;">MEH ECS Validation Tool</h2>
+        <h2 style="margin:0;">Dashboard</h2>
         <span id="syncStatus" class="sync-indicator">Syncing...</span>
     </div>
 
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <label>Select Building</label>
-            <button class="btn-refresh" onclick="loadDataFromCloud()">🔄 Refresh Building List</button>
+            <button class="btn-refresh" onclick="loadDataFromCloud()">🔄 Refresh List</button>
         </div>
         <select id="buildingSelect"><option>Loading...</option></select>
         <button class="btn btn-load" onclick="loadBuildingToTable()">LOAD PLOW DATA</button>
 
         <div id="adminSection">
-            <label style="color: var(--purple);">🛠 Admin Master Controls</label>
+            <label style="color: var(--purple);">Admin Master Controls</label>
             <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
-            <button class="btn-admin" onclick="document.getElementById('csvFileInput').click()">📂 Import Building CSV</button>
-            <button id="uploadCsvBtn" class="btn-admin" style="background:#e83e8c; display:none;" onclick="processCSV()">🚀 Confirm CSV Upload</button>
-            <button class="btn-admin" style="background:var(--info);" onclick="exportAllReports()">📥 Export All Reports (CSV)</button>
-            <button class="btn-admin" style="background:var(--gray);" onclick="clearAllReports()">🗑️ Clear Report History</button>
-            <button class="btn-admin" style="background:var(--danger);" onclick="wipeAllBuildings()">🗑️ Wipe Master Building List</button>
+            <button class="btn-admin" onclick="document.getElementById('csvFileInput').click()">Import Building CSV</button>
+            <button id="uploadCsvBtn" class="btn-admin" style="background:#e83e8c; display:none;" onclick="processCSV()">Confirm CSV Upload</button>
+            <button class="btn-admin" style="background:var(--info);" onclick="exportAllReports()">Export All Reports (CSV)</button>
+            <button class="btn-admin" style="background:var(--gray);" onclick="clearAllReports()">Clear Report History</button>
+            <button class="btn-admin" style="background:var(--danger);" onclick="wipeAllBuildings()">Wipe Master Building List</button>
         </div>
     </div>
 
