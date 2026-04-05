@@ -76,6 +76,24 @@ function loadBuildingToTable() {
     }
 }
 
+// NEW: ADD OPPORTUNISTIC ENTRY FUNCTION
+function addOpportunisticEntry() {
+    const bName = prompt("Enter Building Name:");
+    if (!bName) return;
+    const ecsCode = prompt("Enter ECS Code:");
+    if (!ecsCode) return;
+
+    const tbody = document.querySelector("#ecsTable tbody");
+    const row = tbody.insertRow();
+    row.innerHTML = `
+        <td style="font-weight:bold; color:var(--info);">${bName.toUpperCase()}</td>
+        <td>${ecsCode.toUpperCase()}</td>
+        <td><select style="width:100%;"><option>1HAND_POS</option><option>2PREP_ALMT</option><option>3WELDING</option><option>4PUNCH</option></select></td>
+        <td><button class="del-btn" onclick="this.parentElement.parentElement.remove()">DELETE</button></td>
+    `;
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+
 async function saveToCloud() {
     const rows = document.querySelectorAll("#ecsTable tbody tr");
     const btn = document.getElementById("mainSaveBtn");
@@ -83,14 +101,14 @@ async function saveToCloud() {
     const reportData = Array.from(rows).map(tr => ({ building: tr.cells[0].innerText, ecs_code: tr.cells[1].innerText, status: tr.cells[2].querySelector("select").value }));
     try {
         btn.disabled = true;
-        btn.innerText = "SAVING REPORT..."; // Updated loading text
+        btn.innerText = "SAVING REPORT...";
         const reportID = `${reportData[0].building}_${Date.now()}`;
         await db.collection("reports").doc(reportID).set({ data: reportData, user: auth.currentUser.email, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
         alert("Success: Report saved.");
         document.querySelector("#ecsTable tbody").innerHTML = "";
     } catch (e) { alert("Error: " + e.message); }
     btn.disabled = false;
-    btn.innerText = "SAVE REPORT"; // Updated button text
+    btn.innerText = "SAVE REPORT";
 }
 
 document.getElementById('csvFileInput').addEventListener('change', (e) => { if (e.target.files.length > 0) document.getElementById('uploadCsvBtn').style.display = 'block'; });
@@ -150,7 +168,7 @@ async function clearAllReports() {
 }
 
 async function wipeAllBuildings() {
-    if (!confirm("Clear master building list?")) return;
+    if (!confirm("Wipe master building list?")) return;
     try {
         const snap = await db.collection("buildings").get();
         const batch = db.batch();
