@@ -2,68 +2,83 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ECS Validation Tool</title>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    
     <style>
-        body { font-family: sans-serif; padding: 15px; background: #f4f4f4; margin: 0; }
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2c3e50; display: flex; justify-content: center; align-items: center; z-index: 9999; }
-        .login-box { background: white; padding: 30px; border-radius: 12px; width: 300px; text-align: center; }
-        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
-        .login-box button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        #mainApp { display: none; }
-        .controls { display: grid; grid-template-columns: 1fr; gap: 15px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        label { font-weight: bold; font-size: 14px; color: #555; }
-        select { width: 100%; padding: 15px; font-size: 18px; border-radius: 8px; border: 1px solid #ccc; }
-        .plow-btn { background: #6c757d; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .load-bldg-btn { background: #28a745; color: white; border: none; padding: 20px; font-size: 20px; font-weight: bold; border-radius: 10px; cursor: pointer; }
-        table { width: 100%; border-collapse: collapse; background: white; margin-top: 10px; }
-        th, td { border-bottom: 1px solid #eee; padding: 12px; text-align: left; }
-        th { background: #333; color: white; }
-        .del-btn { background: #dc3545; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; }
-        .export-btn { position: fixed; bottom: 20px; left: 5%; width: 90%; padding: 20px; background: #007bff; color: white; font-size: 20px; font-weight: bold; border: none; border-radius: 50px; cursor: pointer; }
-        /* Admin Styling */
-        #adminSection { display: none; border-top: 2px dashed #ccc; margin-top: 15px; padding-top: 15px; }
-        .admin-btn { background: #6f42c1; color: white; border: none; padding: 10px; border-radius: 6px; width: 100%; cursor: pointer; margin-top: 5px; }
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --info: #17a2b8; --dark: #2c3e50; }
+        body { font-family: -apple-system, sans-serif; padding: 0; margin: 0; background: #f8f9fa; }
+        
+        /* Login UI */
+        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); display: flex; justify-content: center; align-items: center; z-index: 10000; }
+        .login-box { background: white; padding: 30px; border-radius: 15px; width: 90%; max-width: 350px; text-align: center; }
+        .login-box input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .login-box button { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        
+        /* Main App */
+        #mainApp { display: none; padding: 15px; padding-bottom: 120px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .sync-indicator { font-size: 12px; font-weight: bold; padding: 5px; border-radius: 4px; background: #eee; float: right; }
+        
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #666; font-size: 14px; }
+        select { width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; margin-bottom: 15px; }
+        
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .btn-load { background: var(--success); color: white; }
+        
+        /* Table */
+        .table-container { overflow-x: auto; background: white; border-radius: 8px; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; min-width: 450px; }
+        th { background: #f1f1f1; padding: 12px; text-align: left; font-size: 13px; }
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .del-btn { background: var(--danger); color: white; border: none; padding: 5px 10px; border-radius: 4px; }
+
+        /* Admin Controls */
+        #adminSection { display: none; border-top: 2px dashed #ddd; margin-top: 20px; padding-top: 20px; }
+        .btn-admin { background: #6f42c1; color: white; padding: 10px; font-size: 14px; }
+        .btn-export { background: var(--info); }
+        .btn-wipe { background: var(--danger); }
+
+        /* Floating Save Button */
+        .export-btn { position: fixed; bottom: 20px; left: 5%; width: 90%; padding: 20px; background: var(--primary); color: white; font-size: 18px; font-weight: bold; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
 <div id="loginOverlay">
     <div class="login-box">
-        <h2>Field Access</h2>
+        <h2>Field Login</h2>
         <input type="email" id="emailInput" placeholder="Email">
         <input type="password" id="passInput" placeholder="Password">
-        <button onclick="handleLogin()">Login</button>
-        <p id="loginError" style="color:red; display:none;"></p>
+        <button onclick="handleLogin()">Sign In</button>
+        <p id="loginError" style="color:red; display:none; margin-top:10px;"></p>
     </div>
 </div>
 
 <div id="mainApp">
-    <div style="padding: 15px; padding-bottom: 120px;">
-        <h2>MEH Validation Tool</h2>
-        <div class="controls">
-            <div style="display: flex; justify-content: space-between;">
-                <button class="plow-btn" onclick="loadDataFromCloud()">🔄 Refresh List</button>
-                <span id="syncStatus" style="font-size: 12px; color: gray;">Not Synced</span>
-            </div>
-            <div>
-                <label>Select Your Building</label>
-                <select id="buildingSelect"></select>
-            </div>
-            <button class="load-bldg-btn" onclick="loadBuildingToTable()">LOAD BUILDING</button>
+    <span id="syncStatus" class="sync-indicator">Offline</span>
+    <h2 style="margin-top:0;">ECS Tool</h2>
 
-            <div id="adminSection">
-                <label>🛠 Admin: Update Buildings (CSV)</label>
-                <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
-                <button class="admin-btn" onclick="document.getElementById('csvFileInput').click()">📂 Select data.csv - E.G B101,Code1;Code2;Code3</button>
-                <button id="uploadCsvBtn" class="admin-btn" style="background:#e83e8c; display:none;" onclick="processCSV()">🚀 Push to Firestore</button>
-            </div>
+    <div class="card">
+        <label>Building Selection</label>
+        <select id="buildingSelect"><option>Loading...</option></select>
+        <button class="btn btn-load" onclick="loadBuildingToTable()">LOAD BUILDING</button>
+
+        <div id="adminSection">
+            <label>🛠 Admin Controls</label>
+            <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
+            <button class="btn btn-admin" onclick="document.getElementById('csvFileInput').click()">📂 Import Building List (CSV)</button>
+            <button id="uploadCsvBtn" class="btn btn-admin" style="background:#e83e8c; display:none;" onclick="processCSV()">🚀 Confirm Upload</button>
+            
+            <button class="btn btn-admin btn-export" onclick="exportAllReports()">📥 Export All Reports (CSV)</button>
+            <button class="btn btn-admin btn-wipe" onclick="wipeAllBuildings()">🗑️ Wipe Building List</button>
         </div>
+    </div>
 
+    <div class="table-container">
         <table id="ecsTable">
             <thead>
                 <tr><th>Building</th><th>ECS Code</th><th>Validation</th><th></th></tr>
@@ -71,7 +86,8 @@
             <tbody></tbody>
         </table>
     </div>
-    <button class="export-btn" onclick="saveToCloud()">UPLOAD TO CLOUD</button>
+
+    <button class="export-btn" id="mainSaveBtn" onclick="saveToCloud()">UPLOAD TO CLOUD</button>
 </div>
 
 <script src="app.js"></script>
