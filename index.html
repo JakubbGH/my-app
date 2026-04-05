@@ -9,7 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     
     <style>
-        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --info: #17a2b8; --dark: #2c3e50; --purple: #6f42c1; --gray: #6c757d; }
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --info: #17a2b8; --dark: #2c3e50; --purple: #6f42c1; --gray: #6c757d; --warning: #ffc107; }
         
         html, body {
             height: 100%;
@@ -37,9 +37,10 @@
         label { display: block; margin-bottom: 8px; font-weight: bold; font-size: 14px; color: #555; }
         select { width: 100%; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; background: #fff; margin-bottom: 10px; }
         
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; margin-bottom: 10px; }
         .btn-load { background: var(--success); color: white; }
-        .btn-refresh { background: #eee; color: #333; font-size: 11px; padding: 6px 12px; width: auto; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; text-transform: uppercase; }
+        .btn-opp { background: var(--info); color: white; }
+        .btn-refresh { background: #eee; color: #333; font-size: 11px; padding: 6px 12px; width: auto; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; text-transform: uppercase; margin-bottom: 0; }
 
         .table-container { background: white; border-radius: 10px; overflow-x: auto; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         table { width: 100%; border-collapse: collapse; min-width: 450px; }
@@ -78,15 +79,16 @@
         </div>
         <select id="buildingSelect"><option>Loading...</option></select>
         <button class="btn btn-load" onclick="loadBuildingToTable()">LOAD PLOW DATA</button>
+        <button class="btn btn-opp" onclick="addOpportunisticEntry()">ADD OPPORTUNISTIC WORK</button>
 
         <div id="adminSection">
             <label style="color: var(--purple);">Admin Master Controls</label>
             <input type="file" id="csvFileInput" accept=".csv" style="display:none;">
-            <button class="btn-admin" onclick="document.getElementById('csvFileInput').click()">Import Building (CSV)</button>
+            <button class="btn-admin" onclick="document.getElementById('csvFileInput').click()">Import Building CSV</button>
             <button id="uploadCsvBtn" class="btn-admin" style="background:#e83e8c; display:none;" onclick="processCSV()">Confirm CSV Upload</button>
             <button class="btn-admin" style="background:var(--info);" onclick="exportAllReports()">Export All Reports (CSV)</button>
             <button class="btn-admin" style="background:var(--gray);" onclick="clearAllReports()">Clear Report History</button>
-            <button class="btn-admin" style="background:var(--danger);" onclick="wipeAllBuildings()">Clear Master Building List</button>
+            <button class="btn-admin" style="background:var(--danger);" onclick="wipeAllBuildings()">Wipe Master Building List</button>
         </div>
     </div>
 
