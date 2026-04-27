@@ -126,6 +126,7 @@ function setSyncStatus(text, background, color) {
 
 /* -------------------------------------------------------
    BUILDING LOAD
+   No orderBy. No composite index required.
 ------------------------------------------------------- */
 
 async function loadBuildingsFromCloud() {
@@ -138,8 +139,8 @@ async function loadBuildingsFromCloud() {
         const mainBuildings = await getBuildingsFromCollection(MAIN_COLLECTION);
         const opportunisticBuildings = await getBuildingsFromCollection(OPPORTUNISTIC_COLLECTION);
 
-        const mainOnlyBuildings = [...new Set(mainBuildings)].sort();
-        const opportunisticOnlyBuildings = [...new Set(opportunisticBuildings)].sort();
+        const mainOnlyBuildings = [...new Set(mainBuildings)].sort((a, b) => a.localeCompare(b));
+        const opportunisticOnlyBuildings = [...new Set(opportunisticBuildings)].sort((a, b) => a.localeCompare(b));
 
         bSelect.innerHTML = "";
         oppBuildingSelect.innerHTML = "";
@@ -166,24 +167,19 @@ async function loadBuildingsFromCloud() {
     } catch (e) {
         setSyncStatus("Offline", "#f8d7da", "#842029");
         console.error(e);
+        alert("Database load error: " + e.message);
     }
 }
 
 async function getBuildingsFromCollection(collectionName) {
     const buildings = new Set();
 
-    try {
-        const snap = await db.collection(collectionName)
-            .orderBy("building")
-            .get();
+    const snap = await db.collection(collectionName).get();
 
-        snap.forEach(doc => {
-            const data = doc.data();
-            if (data.building) buildings.add(data.building);
-        });
-    } catch (e) {
-        console.warn(`Could not load buildings from ${collectionName}`, e);
-    }
+    snap.forEach(doc => {
+        const data = doc.data();
+        if (data.building) buildings.add(String(data.building).trim());
+    });
 
     return [...buildings];
 }
@@ -436,29 +432,28 @@ function clearManualOpportunisticEntry() {
 
 /* -------------------------------------------------------
    FIRESTORE QUERY HELPERS
+   No orderBy. No composite index required.
 ------------------------------------------------------- */
 
 async function getRoomsForBuilding(collectionName, building) {
     const snap = await db.collection(collectionName)
         .where("building", "==", building)
-        .orderBy("room_id")
         .get();
 
     const rooms = new Set();
 
     snap.forEach(doc => {
         const data = doc.data();
-        if (data.room_id) rooms.add(data.room_id);
+        if (data.room_id) rooms.add(String(data.room_id).trim());
     });
 
-    return [...rooms].sort();
+    return [...rooms].sort((a, b) => a.localeCompare(b));
 }
 
 async function getEcsForBuildingRoom(collectionName, building, roomId) {
     const snap = await db.collection(collectionName)
         .where("building", "==", building)
         .where("room_id", "==", roomId)
-        .orderBy("ecs_code")
         .get();
 
     const items = [];
@@ -475,7 +470,7 @@ async function getEcsForBuildingRoom(collectionName, building, roomId) {
         });
     });
 
-    return items;
+    return items.sort((a, b) => String(a.ecs_code).localeCompare(String(b.ecs_code)));
 }
 
 /* -------------------------------------------------------
