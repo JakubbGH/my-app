@@ -21,7 +21,8 @@ const GATE_STATUSES_BY_COMMODITY = {
     SUPPORT: ["1ENDS_CUT", "2PREP_TACK", "3WELDING"],
     EQUIP: ["1_INT_PREP", "2_1ST_INST", "3_2ND_INST", "4_ALIGN", "5_FINAL"],
     PCON: ["1CUT_PREP", "2BOLT_ALMT"],
-    CLAMPVALVE: ["1HAND_POS", "2INSTALL"],
+    CLAMP: ["1HAND_POS", "2INSTALL"],
+    VALVE: ["1HAND_POS", "2INSTALL"],
     CABLE: ["Install"],
     INLINE: ["1HAND_POS", "2INSTALL"],
     DUCT: ["1HAND_POS", "2INST_DUCT", "3LEAK_TEST"],
@@ -79,24 +80,66 @@ async function handleLogout() {
 }
 
 /* -------------------------------------------------------
+   MANUAL SYNC BUTTON
+------------------------------------------------------- */
+
+async function syncDatabase() {
+    const btn = document.getElementById("syncBtn");
+
+    try {
+        btn.disabled = true;
+        btn.innerText = "SYNCING...";
+
+        clearDropdownState();
+        await loadBuildingsFromCloud();
+
+        setSyncStatus("Synced", "#d4edda", "#155724");
+
+        setTimeout(() => {
+            setSyncStatus("Cloud Active", "#d4edda", "#155724");
+        }, 1500);
+    } catch (e) {
+        alert("Sync error: " + e.message);
+        console.error(e);
+        setSyncStatus("Sync Failed", "#f8d7da", "#842029");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "SYNC DATABASE";
+    }
+}
+
+function clearDropdownState() {
+    document.getElementById("roomSelect").innerHTML = `<option value="">Select room...</option>`;
+    document.getElementById("ecsCodeSelect").innerHTML = `<option value="">Select ECS...</option>`;
+    document.getElementById("oppRoomSelect").innerHTML = `<option value="">Select room...</option>`;
+    document.getElementById("oppEcsSelect").innerHTML = `<option value="">Select ECS...</option>`;
+
+    document.getElementById("roomPicker").style.display = "none";
+}
+
+function setSyncStatus(text, background, color) {
+    const status = document.getElementById("syncStatus");
+    status.innerText = text;
+    status.style.background = background;
+    status.style.color = color;
+}
+
+/* -------------------------------------------------------
    BUILDING LOAD
 ------------------------------------------------------- */
 
 async function loadBuildingsFromCloud() {
-    const status = document.getElementById("syncStatus");
+    setSyncStatus("Syncing...", "#fff3cd", "#664d03");
+
     const bSelect = document.getElementById("buildingSelect");
     const oppBuildingSelect = document.getElementById("oppBuildingSelect");
-
-    status.innerText = "Syncing...";
-    status.style.background = "#fff3cd";
-    status.style.color = "#664d03";
 
     try {
         const mainBuildings = await getBuildingsFromCollection(MAIN_COLLECTION);
         const opportunisticBuildings = await getBuildingsFromCollection(OPPORTUNISTIC_COLLECTION);
 
         const mainOnlyBuildings = [...new Set(mainBuildings)].sort();
-        const allBuildings = [...new Set([...mainBuildings, ...opportunisticBuildings])].sort();
+        const opportunisticOnlyBuildings = [...new Set(opportunisticBuildings)].sort();
 
         bSelect.innerHTML = "";
         oppBuildingSelect.innerHTML = "";
@@ -110,22 +153,18 @@ async function loadBuildingsFromCloud() {
             });
         }
 
-        if (allBuildings.length === 0) {
+        if (opportunisticOnlyBuildings.length === 0) {
             oppBuildingSelect.innerHTML = `<option value="">Empty</option>`;
         } else {
             oppBuildingSelect.innerHTML = `<option value="">Select building...</option>`;
-            allBuildings.forEach(building => {
+            opportunisticOnlyBuildings.forEach(building => {
                 oppBuildingSelect.add(new Option(building, building));
             });
         }
 
-        status.innerText = "Cloud Active";
-        status.style.background = "#d4edda";
-        status.style.color = "#155724";
+        setSyncStatus("Cloud Active", "#d4edda", "#155724");
     } catch (e) {
-        status.innerText = "Offline";
-        status.style.background = "#f8d7da";
-        status.style.color = "#842029";
+        setSyncStatus("Offline", "#f8d7da", "#842029");
         console.error(e);
     }
 }
@@ -365,21 +404,10 @@ function addManualOpportunisticEntry() {
     const ecsCode = cleanCell(ecsInput.value).toUpperCase();
     const commodity = normalizeCommodity(commodityInput.value);
 
-    if (!building) {
-        return alert("Please enter a building.");
-    }
-
-    if (!roomId) {
-        return alert("Please enter a room ID.");
-    }
-
-    if (!ecsCode) {
-        return alert("Please enter an ECS code.");
-    }
-
-    if (!commodity) {
-        return alert("Please select a commodity.");
-    }
+    if (!building) return alert("Please enter a building.");
+    if (!roomId) return alert("Please enter a room ID.");
+    if (!ecsCode) return alert("Please enter an ECS code.");
+    if (!commodity) return alert("Please select a commodity.");
 
     if (!GATE_STATUSES_BY_COMMODITY[commodity]) {
         return alert("Invalid commodity selected.");
@@ -443,7 +471,7 @@ async function getEcsForBuildingRoom(collectionName, building, roomId) {
             building: data.building,
             room_id: data.room_id,
             ecs_code: data.ecs_code,
-            commodity: data.commodity
+            commodity: normalizeCommodity(data.commodity)
         });
     });
 
@@ -642,7 +670,7 @@ async function processCSVUpload({ fileInputId, buttonId, collectionName, label }
             fileInput.value = "";
             btn.style.display = "none";
 
-            await loadBuildingsFromCloud();
+            await syncDatabase();
         } catch (err) {
             alert("CSV Error: " + err.message);
             console.error(err);
@@ -756,7 +784,7 @@ async function wipeMainMasterList() {
         document.getElementById("ecsCodeSelect").innerHTML = `<option value="">Select ECS...</option>`;
         document.getElementById("roomPicker").style.display = "none";
 
-        await loadBuildingsFromCloud();
+        await syncDatabase();
 
         alert("Main ECS master list deleted.");
     } catch (e) {
@@ -775,7 +803,7 @@ async function wipeOpportunisticMasterList() {
         document.getElementById("oppEcsSelect").innerHTML = `<option value="">Select ECS...</option>`;
         document.getElementById("opportunisticPicker").style.display = "none";
 
-        await loadBuildingsFromCloud();
+        await syncDatabase();
 
         alert("Opportunistic master list deleted.");
     } catch (e) {
@@ -859,9 +887,10 @@ function cleanCell(value) {
 function normalizeCommodity(value) {
     const clean = String(value || "").trim().toUpperCase();
 
-    if (clean === "CLAMP VALVE") return "CLAMPVALVE";
-    if (clean === "CLAMP_VALVE") return "CLAMPVALVE";
-    if (clean === "CLAMP-VALVE") return "CLAMPVALVE";
+    if (clean === "CLAMPVALVE") return "CLAMP";
+    if (clean === "CLAMP VALVE") return "CLAMP";
+    if (clean === "CLAMP_VALVE") return "CLAMP";
+    if (clean === "CLAMP-VALVE") return "CLAMP";
 
     return clean;
 }
