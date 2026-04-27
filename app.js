@@ -8,7 +8,6 @@ const firebaseConfig = {
 };
 
 const ADMIN_EMAIL = "admin@ecs-tool.com";
-
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
