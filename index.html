@@ -164,6 +164,14 @@
             box-shadow: 0 4px 14px rgba(0,0,0,0.08);
         }
 
+        .login-logo {
+            display: block;
+            max-width: 180px;
+            width: 55%;
+            height: auto;
+            margin: 0 0 18px 0;
+        }
+
         .grid {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -306,8 +314,10 @@
 
     <!-- LOGIN -->
     <div id="loginOverlay" class="login-overlay">
-        <div class="login-box">
-            <h2>ECS Progress Recording Tool Login</h2>
+       <div class="login-box">
+        <img src="meh_alliance_logo.jpg" alt="MEH Alliance Logo" class="login-logo">
+
+        <h2>ECS Progress Recording Tool Login</h2>
 
             <input id="emailInput" type="email" placeholder="Email">
             <input id="passInput" type="password" placeholder="Password">
