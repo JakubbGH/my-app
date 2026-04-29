@@ -281,7 +281,7 @@ function addSelectedEcsCode() {
         return alert("This item is already in your report.");
     }
 
-    addReportRow(building, roomId, ecsCode, commodity);
+    addReportRow(building, roomId, ecsCode, commodity, false);
 }
 
 /* -------------------------------------------------------
@@ -390,7 +390,7 @@ function addSelectedOpportunisticEntry() {
         return alert("This item is already in your report.");
     }
 
-    addReportRow(building, roomId, ecsCode, commodity);
+    addReportRow(building, roomId, ecsCode, commodity, true);
 
     window.scrollTo({
         top: document.body.scrollHeight,
@@ -443,7 +443,7 @@ function addManualOpportunisticEntry() {
         return alert("This item is already in your report.");
     }
 
-    addReportRow(building, roomId, ecsCode, commodity);
+    addReportRow(building, roomId, ecsCode, commodity, true);
 
     clearManualOpportunisticEntry();
 
@@ -518,12 +518,15 @@ async function getEcsForBuildingRoom(collectionName, building, roomId) {
    REPORT TABLE
 ------------------------------------------------------- */
 
-function addReportRow(building, roomId, ecsCode, commodity) {
+function addReportRow(building, roomId, ecsCode, commodity, isOpportunistic = false) {
     const tbody = document.querySelector("#ecsTable tbody");
     const row = tbody.insertRow();
 
     const cleanCommodity = normalizeCommodity(commodity);
     const statuses = GATE_STATUSES_BY_COMMODITY[cleanCommodity] || [];
+    const opportunisticLabel = isOpportunistic ? "YES" : "NO";
+
+    row.dataset.opportunistic = isOpportunistic ? "true" : "false";
 
     const statusOptions = statuses
         .map(status => `<option value="${escapeHtml(status)}">${escapeHtml(status)}</option>`)
@@ -534,6 +537,7 @@ function addReportRow(building, roomId, ecsCode, commodity) {
         <td>${escapeHtml(roomId)}</td>
         <td>${escapeHtml(ecsCode)}</td>
         <td>${escapeHtml(cleanCommodity)}</td>
+        <td>${escapeHtml(opportunisticLabel)}</td>
         <td>
             <select style="width:100%;">
                 ${statusOptions}
@@ -573,7 +577,9 @@ async function saveToCloud() {
         room_id: tr.cells[1].innerText,
         ecs_code: tr.cells[2].innerText,
         commodity: tr.cells[3].innerText,
-        status: tr.cells[4].querySelector("select").value
+        opportunistic_work: tr.dataset.opportunistic === "true",
+        opportunistic_label: tr.cells[4].innerText,
+        status: tr.cells[5].querySelector("select").value
     }));
 
     try {
@@ -770,7 +776,7 @@ async function exportAllReports() {
             return alert("No reports available.");
         }
 
-        let csv = "Building,Room ID,ECS Code,Commodity,Status,User,Time\n";
+        let csv = "Building,Room ID,ECS Code,Commodity,Opportunistic Work,Status,User,Time\n";
 
         snap.forEach(doc => {
             const r = doc.data();
@@ -778,7 +784,9 @@ async function exportAllReports() {
 
             if (r.data && Array.isArray(r.data)) {
                 r.data.forEach(i => {
-                    csv += `"${csvEscape(i.building)}","${csvEscape(i.room_id)}","${csvEscape(i.ecs_code)}","${csvEscape(i.commodity)}","${csvEscape(i.status)}","${csvEscape(r.user)}","${csvEscape(time)}"\n`;
+                    const opportunisticFlag = i.opportunistic_work === true ? "YES" : "NO";
+
+                    csv += `"${csvEscape(i.building)}","${csvEscape(i.room_id)}","${csvEscape(i.ecs_code)}","${csvEscape(i.commodity)}","${csvEscape(opportunisticFlag)}","${csvEscape(i.status)}","${csvEscape(r.user)}","${csvEscape(time)}"\n`;
                 });
             }
         });
